@@ -1,0 +1,3 @@
+[submodule "pc/lib/luau"]
+	path = pc/lib/luau
+	url = https://github.com/luau-lang/luau.git

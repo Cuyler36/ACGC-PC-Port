@@ -1,0 +1,35 @@
+CompileFlags:
+  CompilationDatabase: pc/build32
+  Add:
+    - "-fdeclspec"
+    - "-std=c++17"
+    - "-D__INTELLISENSE__"
+    - "-DVERSION=0"
+    - "-DDEBUG=0"
+    - "-DNDEBUG"
+    - "-DF3DEX_GBI_2"
+    - "-D_LANGUAGE_C"
+    - "-DTARGET_PC"
+    # Project include paths (relative to repo root)
+    - "-Iinclude"
+    - "-Isrc"
+    - "-I."
+    - "-Ipc/include"
+    - "-Ipc/lib/glad/include"
+    - "-Ipc/lib/fixnes"
+    # Luau — mirrors Luau.* CMake target include directories
+    - "-Ipc/lib/luau/VM/include"
+    - "-Ipc/lib/luau/Compiler/include"
+    - "-Ipc/lib/luau/Common/include"
+    - "-Ipc/lib/luau/Ast/include"
+    - "-Ipc/lib/luau/Bytecode/include"
+    - "-Ipc/lib/luau/Inliner/include"
+    - "-Ipc/lib/luau/Config/include"
+    - "-Ipc/lib/luau/Analysis/include"
+    - "-Ipc/lib/luau/CodeGen/include"
+    - "-Ipc/lib/luau/Require/include"
+    - "-Ipc/lib/luau/CLI/include"
+    - "-Ipc/lib/luau/extern/isocline/include"
+
+Diagnostics:
+  UnusedIncludes: None

@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.16)
 project(ac_pc C CXX)
 
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 17)
 
@@ -27,6 +29,14 @@ endif()
 # Allow mixed C/C++ linkage
 set(CMAKE_C_EXTENSIONS ON)
 set(CMAKE_CXX_EXTENSIONS ON)
+
+# =============================================================================
+# Luau (modding / scripting) — must be added BEFORE game-specific compile defs
+# =============================================================================
+set(LUAU_BUILD_CLI OFF CACHE BOOL "" FORCE)
+set(LUAU_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+set(LUAU_EXTERN_C ON CACHE BOOL "" FORCE)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/lib/luau EXCLUDE_FROM_ALL)
 
 # =============================================================================
 # Compiler definitions
@@ -406,6 +416,15 @@ if(WIN32)
 endif()
 
 # =============================================================================
+# Mod runtime sources
+# =============================================================================
+set(MOD_SOURCES
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/pc_mod.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/pc_mod_host.cpp
+)
+list(APPEND PC_SOURCES ${MOD_SOURCES})
+
+# =============================================================================
 # Build executable
 # =============================================================================
 add_executable(ac_pc
@@ -430,6 +449,8 @@ else()
     find_package(OpenGL REQUIRED)
     target_link_libraries(ac_pc OpenGL::GL dl pthread m)
 endif()
+
+target_link_libraries(ac_pc Luau.Compiler Luau.VM)
 
 set_target_properties(ac_pc PROPERTIES
     OUTPUT_NAME "AnimalCrossing"
@@ -483,6 +504,8 @@ endif()
 # Use -DPC_CONSOLE=ON to keep the console visible for debugging
 if(WIN32 AND NOT PC_CONSOLE)
     target_link_options(ac_pc PRIVATE -mwindows)
+    # Luau compiler is stack-heavy; default 1 MB GUI stack can overflow during compile
+    target_link_options(ac_pc PRIVATE -Wl,--stack,16777216)
 endif()
 
 # =============================================================================

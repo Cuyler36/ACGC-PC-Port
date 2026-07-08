@@ -8,6 +8,7 @@
 #include "pc_disc.h"
 #include "pc_typing.h"
 #include "pc_pause_menu.h"
+#include "pc_mod.h"
 #include "m_kankyo.h"
 
 /* prefer discrete GPU on laptops */
@@ -321,6 +322,7 @@ int main(int argc, char* argv[]) {
     pc_settings_load();
     pc_keybindings_load();
     pc_platform_init();
+    pc_mod_init();
     pc_disc_init();
     if (!pc_assets_init()) {
         const char* msg =
@@ -338,6 +340,7 @@ int main(int argc, char* argv[]) {
     boot_main(argc, (const char**)argv); /* full init → HotStartEntry → game loop */
 
     pc_disc_shutdown();
+    pc_mod_shutdown();
     pc_platform_shutdown();
     return 0;
 }

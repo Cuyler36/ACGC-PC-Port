@@ -7,6 +7,10 @@
 #include "dolphin/os/OSUtil.h"
 #include "dolphin/os.h"
 
+#ifdef TARGET_PC
+#include <stdlib.h>
+#endif
+
 JKRHeap* JKRHeap::sSystemHeap;
 JKRHeap* JKRHeap::sCurrentHeap;
 JKRHeap* JKRHeap::sRootHeap;
@@ -98,6 +102,13 @@ void* JKRHeap::alloc(u32 byteCount, int padding, JKRHeap* heap) {
     } else if (sCurrentHeap) {
         memory = sCurrentHeap->do_alloc(byteCount, padding);
     }
+#ifdef TARGET_PC
+    /* Before JKRHeap is initialized, global operator new still runs (Luau, STL, etc).
+       Fall back to malloc so early allocations don't return null and crash. */
+    else if (byteCount > 0) {
+        memory = malloc(byteCount);
+    }
+#endif
     return memory;
 }
 
@@ -107,9 +118,18 @@ void* JKRHeap::alloc(u32 byteCount, int padding) {
 }
 
 void JKRHeap::free(void* memory, JKRHeap* heap) {
+    if (memory == nullptr) {
+        return;
+    }
     if ((heap) || (heap = findFromRoot(memory), heap)) {
         heap->free(memory);
+#ifdef TARGET_PC
+    } else {
+        ::free(memory);
     }
+#else
+    }
+#endif
 }
 
 void JKRHeap::free(void* memory) {
