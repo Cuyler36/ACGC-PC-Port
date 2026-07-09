@@ -10,7 +10,58 @@ extern "C" {
 #include "m_npc.h"
 #include "m_npc_schedule.h"
 #include "m_npc_walk.h"
+#include "m_actor.h"
+#include "m_field_info.h"
+#include "m_name_table.h"
 #include "ac_set_npc_manager.h"
+#include "m_player_lib.h"
+}
+
+static void pc_mod_clear_npclist_entry(int animal_index) {
+    mNpc_NpcList_c* list;
+
+    if (animal_index < 0 || animal_index >= ANIMAL_NUM_MAX) {
+        return;
+    }
+
+    list = Common_GetPointer(npclist[animal_index]);
+    list->name = EMPTY_NO;
+    list->field_name = RSV_NO;
+    list->appear_flag = FALSE;
+    list->house_data.type = 0xFF;
+    list->house_data.palette = 0xFF;
+    list->house_data.wall_id = 0xFF;
+    list->house_data.floor_id = 0xFF;
+    list->house_data.main_layer_id = 203;
+    list->reward_furniture = EMPTY_NO;
+    mQst_ClearQuestInfo(&list->quest_info);
+}
+
+static void pc_mod_despawn_animal_actors(GAME_PLAY* play, mActor_name_t npc_id, int animal_index) {
+    ACTOR* actorx;
+    mActor_name_t house_id;
+
+    if (play == NULL || ITEM_NAME_GET_TYPE(npc_id) != NAME_TYPE_NPC) {
+        return;
+    }
+
+    actorx = Actor_info_fgName_search(&play->actor_info, npc_id, ACTOR_PART_NPC);
+    if (actorx == NULL && animal_index >= 0 && animal_index < ANIMAL_NUM_MAX) {
+        mActor_name_t list_name = Common_Get(npclist[animal_index]).name;
+        if (list_name != EMPTY_NO) {
+            actorx = Actor_info_fgName_search(&play->actor_info, list_name, ACTOR_PART_NPC);
+        }
+    }
+
+    if (actorx != NULL) {
+        Actor_delete(actorx);
+    }
+
+    house_id = NPC_ID_TO_NPC_HOUSE_ID(npc_id);
+    actorx = Actor_info_fgName_search(&play->actor_info, house_id, ACTOR_PART_ITEM);
+    if (actorx != NULL) {
+        Actor_delete(actorx);
+    }
 }
 
 Animal_c* pc_mod_animal_data(PcModAnimalHandle* handle) {
@@ -233,6 +284,8 @@ static int l_animal_npc_delete(lua_State* L) {
     int animal_index = handle->animal_index;
     Animal_c* animal;
     mNpc_walk_c* walk;
+    mActor_name_t npc_id;
+    GAME_PLAY* play;
     int i;
 
     if (!pc_mod_animal_handle_is_valid(handle)) {
@@ -248,40 +301,41 @@ static int l_animal_npc_delete(lua_State* L) {
         luaL_error(L, "NPC #%d is not live", animal_index);
     }
 
+    npc_id = animal->id.npc_id;
+    play = pc_mod_try_get_play();
+
     mNPS_reset_schedule_area(&animal->id);
     Common_Get(npc_schedule[animal_index]).id = NULL;
 
     // Clear walk info if the villager is currently outside
     walk = Common_GetPointer(npc_walk);
     for (i = 0; i < mNpcW_MAX; i++) {
-        if (mNpc_CheckCmpAnimalPersonalID(&walk->info[i].id,&animal->id)) {
+        if (mNpc_CheckCmpAnimalPersonalID(&walk->info[i].id, &animal->id)) {
             mNpcW_ClearNpcWalkInfo(&walk->info[i], 1);
             walk->used_idx_bitfield &= ~(1u << animal_index);
             break;
         }
     }
 
-    GAME_PLAY* play = pc_mod_try_get_play();
     if (play != NULL) {
-        ACTOR* actorx = Actor_info_fgName_search(&play->actor_info, animal->id.npc_id, ACTOR_PART_NPC);
-
-        if (actorx != NULL) {
-            NPC_CLIP->dt_proc(actorx, (GAME*)play);
-        }
+        aSNMgr_UnregisterAnimalInManager(play, animal_index);
+        pc_mod_despawn_animal_actors(play, npc_id, animal_index);
     }
 
     if (mNpc_RemoveNpcByIdx(animal_index, TRUE) == -1) {
         luaL_error(L, "failed to delete NPC #%d", animal_index);
     }
 
-    // Remove from set NPC manager
-    if (play != NULL) {
-        aSNMgr_UnregisterAnimalInManager(play, animal_index);
-    }
+    pc_mod_clear_npclist_entry(animal_index);
 
     if (mFI_CheckFieldData()) {
-        // Update to remove house
         mFI_SetFGUpData();
+        if (play != NULL) {
+            PLAYER_ACTOR* player = GET_PLAYER_ACTOR(play);
+            if (player != NULL) {
+                mFI_SetBearActor(play, player->actor_class.world.position, TRUE);
+            }
+        }
     }
 
     pc_mod_invalidate_animal_handle(handle);

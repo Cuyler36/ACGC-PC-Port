@@ -8,6 +8,7 @@
 #include <string>
 #include <vector>
 #include <algorithm>
+#include <stdarg.h>
 #include <dirent.h>
 #include <sys/stat.h>
 
@@ -18,6 +19,7 @@
 extern "C" {
 #include "pc_mod.h"
 #include "pc_mod_api.h"
+#include "pc_mod_console.h"
 #include "pc_platform.h"
 }
 
@@ -35,45 +37,170 @@ extern "C" int pc_mod_init(void) {
 }
 
 extern "C" void pc_mod_shutdown(void) {
+    pc_mod_console_stop();
+
     if (g_L) {
         lua_close(g_L);
         g_L = nullptr;
     }
 }
 
-extern "C" int pc_mod_run_source(const char* source, const char* chunkname) {
-    if (!g_L || !source || !chunkname) return -1;
+static int pc_mod_compile_source(const char* source, std::string& bytecode, char* errbuf, size_t errbuf_len) {
+    if (!source) {
+        snprintf(errbuf, errbuf_len, "missing source");
+        return -1;
+    }
 
-    std::string bytecode;
     try {
         bytecode = Luau::compile(std::string(source, strlen(source)));
     } catch (const std::exception& e) {
-        fprintf(stderr, "[mod] compile err: %s\n", e.what());
+        snprintf(errbuf, errbuf_len, "%s", e.what());
         return -1;
     } catch (...) {
-        fprintf(stderr, "[mod] compile err: unknown\n");
+        snprintf(errbuf, errbuf_len, "unknown compile error");
         return -1;
     }
 
     if (bytecode.empty()) {
-        fprintf(stderr, "[mod] compile err: empty output\n");
+        snprintf(errbuf, errbuf_len, "empty compile output");
+        return -1;
+    }
+
+    return 0;
+}
+
+static void pc_mod_repl_errorf(const char* fmt, ...) {
+    char buf[512];
+    va_list ap;
+    va_start(ap, fmt);
+    vsnprintf(buf, sizeof(buf), fmt, ap);
+    va_end(ap);
+
+    if (pc_mod_console_is_enabled()) {
+        pc_mod_console_printf("%s\n", buf);
+    } else {
+        fprintf(stderr, "%s\n", buf);
+    }
+}
+
+static int pc_mod_run_bytecode(lua_State* thread, const char* chunkname, const std::string& bytecode, int nresults) {
+    int result = luau_load(thread, chunkname, bytecode.data(), bytecode.size(), 0);
+    if (result != LUA_OK) {
+        if (pc_mod_console_is_enabled()) {
+            pc_mod_repl_errorf("[lua] load err: %s", lua_tostring(thread, -1));
+        } else {
+            fprintf(stderr, "[mod] load err: %s\n", lua_tostring(thread, -1));
+        }
+        lua_settop(thread, 0);
+        return -1;
+    }
+
+    if (lua_pcall(thread, 0, nresults, 0) != LUA_OK) {
+        if (pc_mod_console_is_enabled()) {
+            pc_mod_repl_errorf("[lua] runtime err: %s", lua_tostring(thread, -1));
+        } else {
+            fprintf(stderr, "[mod] runtime err: %s\n", lua_tostring(thread, -1));
+        }
+        lua_settop(thread, 0);
+        return -1;
+    }
+
+    return 0;
+}
+
+static std::string pc_mod_format_stack_value(lua_State* L, int idx) {
+    int type = lua_type(L, idx);
+
+    switch (type) {
+        case LUA_TNIL:
+            return "nil";
+        case LUA_TBOOLEAN:
+            return lua_toboolean(L, idx) ? "true" : "false";
+        case LUA_TNUMBER: {
+            char buf[64];
+            snprintf(buf, sizeof(buf), "%g", lua_tonumber(L, idx));
+            return buf;
+        }
+        case LUA_TSTRING:
+            return lua_tostring(L, idx);
+        default:
+            return lua_typename(L, type);
+    }
+}
+
+extern "C" int pc_mod_eval_line(const char* line) {
+    if (!g_L || !line || line[0] == '\0') {
+        return -1;
+    }
+
+    std::string source;
+    const char* chunkname = "@console";
+    std::string bytecode;
+    char errbuf[256];
+
+    if (line[0] == '=' && line[1] != '\0') {
+        source = "return ";
+        source += line + 1;
+        chunkname = "@console_expr";
+    } else {
+        source = line;
+    }
+
+    if (pc_mod_compile_source(source.c_str(), bytecode, errbuf, sizeof(errbuf)) != 0) {
+        pc_mod_repl_errorf("[lua] compile err: %s", errbuf);
         return -1;
     }
 
     lua_State* thread = lua_newthread(g_L);
     luaL_sandboxthread(thread);
 
-    int result = luau_load(thread, chunkname, bytecode.data(), bytecode.size(), 0);
-    if (result != LUA_OK) {
-        fprintf(stderr, "[mod] load err: %s\n", lua_tostring(thread, -1));
-        lua_pop(thread, 1);
+    if (pc_mod_run_bytecode(thread, chunkname, bytecode, LUA_MULTRET) != 0) {
         lua_pop(g_L, 1);
         return -1;
     }
 
-    if (lua_pcall(thread, 0, 0, 0) != LUA_OK) {
-        fprintf(stderr, "[mod] runtime err: %s\n", lua_tostring(thread, -1));
-        lua_pop(thread, 1);
+    int result_count = lua_gettop(thread);
+    if (result_count > 0) {
+        if (pc_mod_console_is_enabled()) {
+            for (int i = 1; i <= result_count; i++) {
+                if (i > 1) {
+                    pc_mod_console_printf("\t");
+                }
+                pc_mod_console_printf("%s", pc_mod_format_stack_value(thread, i).c_str());
+            }
+            pc_mod_console_printf("\n");
+        } else {
+            for (int i = 1; i <= result_count; i++) {
+                if (i > 1) {
+                    printf("\t");
+                }
+                fputs(pc_mod_format_stack_value(thread, i).c_str(), stdout);
+            }
+            printf("\n");
+            fflush(stdout);
+        }
+    }
+
+    lua_settop(thread, 0);
+    lua_pop(g_L, 1);
+    return 0;
+}
+
+extern "C" int pc_mod_run_source(const char* source, const char* chunkname) {
+    if (!g_L || !source || !chunkname) return -1;
+
+    std::string bytecode;
+    char errbuf[256];
+
+    if (pc_mod_compile_source(source, bytecode, errbuf, sizeof(errbuf)) != 0) {
+        fprintf(stderr, "[mod] compile err: %s\n", errbuf);
+        return -1;
+    }
+
+    lua_State* thread = lua_newthread(g_L);
+    luaL_sandboxthread(thread);
+
+    if (pc_mod_run_bytecode(thread, chunkname, bytecode, 0) != 0) {
         lua_pop(g_L, 1);
         return -1;
     }

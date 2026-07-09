@@ -9,6 +9,7 @@
 #include "pc_typing.h"
 #include "pc_pause_menu.h"
 #include "pc_mod.h"
+#include "pc_mod_console.h"
 #include "m_kankyo.h"
 
 /* prefer discrete GPU on laptops */
@@ -23,6 +24,7 @@ int           g_pc_running = 1;
 int           g_pc_frame_limit_override = -1;
 int           g_pc_speedhack_enabled = 0;
 int           g_pc_verbose = 0;
+int           g_pc_lua_console = 0;
 int           g_pc_time_override = -1; /* -1=system clock, 0-23=override hour */
 int           g_pc_min_override = -1; /* -1=system clock, 0-59=override minute */
 int           g_pc_sec_override = -1; /* -1=system clock, 0-59=override second */
@@ -228,6 +230,7 @@ int main(int argc, char* argv[]) {
             printf("  --model-viewer [N]  Launch model viewer (optional start index)\n");
             printf("  --time H[:M[:S]]    Override in-game time (e.g. 5, 17:30, 5:55:00)\n");
             printf("  --rain [intensity]  Force rainy weather; intensity is light, normal, or heavy\n");
+            printf("  --lua-console       Open an external Lua REPL (eval on main thread)\n");
             printf("  --help, -h          Show this help message\n");
             return 0;
         } else if (strcmp(argv[i], "--framelimit") == 0) {
@@ -267,11 +270,13 @@ int main(int argc, char* argv[]) {
                     i++;
                 }
             }
+        } else if (strcmp(argv[i], "--lua-console") == 0) {
+            g_pc_lua_console = 1;
         }
     }
 
     /* Redirect stdout/stderr to NUL unless verbose — unbuffered terminal writes
-     * are extremely slow on Windows and tank FPS. */
+     * are extremely slow on Windows and tank FPS. Lua console uses its own window. */
     if (!g_pc_verbose) {
 #ifdef _WIN32
         freopen("NUL", "w", stdout);
@@ -324,6 +329,7 @@ int main(int argc, char* argv[]) {
     pc_platform_init();
     pc_mod_init();
     pc_mod_load_all();
+    pc_mod_console_start();
     pc_disc_init();
     if (!pc_assets_init()) {
         const char* msg =

@@ -9,6 +9,7 @@ int  pc_mod_init(void);
 void pc_mod_shutdown(void);
 int  pc_mod_run_source(const char* source, const char* chunkname);
 int  pc_mod_run_file(const char* path);
+int  pc_mod_eval_line(const char* line);
 void pc_mod_load_all(void);
 void pc_mod_on_frame(void);
 

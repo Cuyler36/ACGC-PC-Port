@@ -421,6 +421,7 @@ endif()
 # =============================================================================
 set(MOD_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/src/mod/host.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/mod/console.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/mod/api.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/mod/lua_internal.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/mod/actor_api.cpp

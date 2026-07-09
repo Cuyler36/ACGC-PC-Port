@@ -1,4 +1,5 @@
 #include "pc_mod_api.h"
+#include "pc_mod_console.h"
 #include "pc_mod_actor_api.h"
 #include "pc_mod_player_api.h"
 #include "pc_mod_item_api.h"
@@ -127,7 +128,10 @@ void pc_mod_dispatch_dt(const char* event, float dt) {
 void pc_mod_on_load(void)        { pc_mod_dispatch("load"); }
 void pc_mod_on_init(void)        { pc_mod_dispatch("init"); }
 void pc_mod_on_begin_frame(float dt) { pc_mod_dispatch_dt("beginframe", dt); }
-void pc_mod_on_end_frame(float dt)   { pc_mod_dispatch_dt("endframe", dt); }
+void pc_mod_on_end_frame(float dt) {
+    pc_mod_console_poll();
+    pc_mod_dispatch_dt("endframe", dt);
+}
 void pc_mod_on_pre_move(float dt)    { pc_mod_dispatch_dt("premove", dt); }
 void pc_mod_on_post_move(float dt)   { pc_mod_dispatch_dt("postmove", dt); }
 void pc_mod_on_pre_draw(float dt)    { pc_mod_dispatch_dt("predraw", dt); }
