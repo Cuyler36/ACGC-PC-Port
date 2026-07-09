@@ -18,10 +18,10 @@ typedef struct {
 
 extern fbdemo_fade* fbdemo_fade_init(fbdemo_fade*);
 extern void fbdemo_fade_move(fbdemo_fade*, int);
-extern void fbdemo_fade_draw(fbdemo_fade* this, Gfx** gfxP);
+extern void fbdemo_fade_draw(fbdemo_fade* fade, Gfx** gfxP);
 extern void fbdemo_fade_startup(fbdemo_fade*);
 extern void fbdemo_fade_settype(fbdemo_fade*, int);
-extern void fbdemo_fade_setcolor_rgba8888(fbdemo_fade* this, u32 color);
+extern void fbdemo_fade_setcolor_rgba8888(fbdemo_fade* fade, u32 color);
 extern u8 fbdemo_fade_is_finish(fbdemo_fade*);
 
 #endif

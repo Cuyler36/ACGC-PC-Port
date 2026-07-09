@@ -59,57 +59,57 @@ extern u16 gfxprint_moji_tlut[];
 extern u8 gfxprint_font[];
 
 /* Macros for quickly checking state of gfxprint struct */
-#define gfxprint_isFlagOn(this, flag) ((this->flags & flag) != 0)
-#define gfxprint_setFlag(this, flag) (this->flags |= flag)
-#define gfxprint_clrFlag(this, flag) (this->flags &= ~flag)
+#define gfxprint_isFlagOn(g, flag) (((g)->flags & flag) != 0)
+#define gfxprint_setFlag(g, flag) ((g)->flags |= flag)
+#define gfxprint_clrFlag(g, flag) ((g)->flags &= ~flag)
 
-#define gfxprint_isOpened(this) (gfxprint_isFlagOn(this, GFXPRINT_FLAG_OPENED))
-#define gfxprint_setOpened(this) (gfxprint_setFlag(this, GFXPRINT_FLAG_OPENED))
-#define gfxprint_clrOpened(this) (gfxprint_clrFlag(this, GFXPRINT_FLAG_OPENED))
+#define gfxprint_isOpened(g) (gfxprint_isFlagOn(g, GFXPRINT_FLAG_OPENED))
+#define gfxprint_setOpened(g) (gfxprint_setFlag(g, GFXPRINT_FLAG_OPENED))
+#define gfxprint_clrOpened(g) (gfxprint_clrFlag(g, GFXPRINT_FLAG_OPENED))
 
-#define gfxprint_isHighres(this) (gfxprint_isFlagOn(this, GFXPRINT_FLAG_HIGHRES))
-#define gfxprint_setHighres(this) (gfxprint_setFlag(this, GFXPRINT_FLAG_HIGHRES))
-#define gfxprint_clrHighres(this) (gfxprint_clrFlag(this, GFXPRINT_FLAG_HIGHRES))
+#define gfxprint_isHighres(g) (gfxprint_isFlagOn(g, GFXPRINT_FLAG_HIGHRES))
+#define gfxprint_setHighres(g) (gfxprint_setFlag(g, GFXPRINT_FLAG_HIGHRES))
+#define gfxprint_clrHighres(g) (gfxprint_clrFlag(g, GFXPRINT_FLAG_HIGHRES))
 
-#define gfxprint_isHiragana(this) ((this->flags & GFXPRINT_FLAG_KANA_MODE) != GFXPRINT_KANA_MODE_KATAKANA)
-#define gfxprint_isKatakana(this) ((this->flags & GFXPRINT_FLAG_KANA_MODE) == GFXPRINT_KANA_MODE_KATAKANA)
-#define gfxprint_setHiragana(this) (this->flags |= GFXPRINT_FLAG_KANA_MODE)
-#define gfxprint_setKatakana(this) (this->flags &= ~GFXPRINT_FLAG_KANA_MODE)
+#define gfxprint_isHiragana(g) ((g->flags & GFXPRINT_FLAG_KANA_MODE) != GFXPRINT_KANA_MODE_KATAKANA)
+#define gfxprint_isKatakana(g) ((g->flags & GFXPRINT_FLAG_KANA_MODE) == GFXPRINT_KANA_MODE_KATAKANA)
+#define gfxprint_setHiragana(g) (g->flags |= GFXPRINT_FLAG_KANA_MODE)
+#define gfxprint_setKatakana(g) (g->flags &= ~GFXPRINT_FLAG_KANA_MODE)
 
-#define gfxprint_isGradient(this) (gfxprint_isFlagOn(this, GFXPRINT_FLAG_GRADIENT))
-#define gfxprint_setGradient(this) (gfxprint_setFlag(this, GFXPRINT_FLAG_GRADIENT))
-#define gfxprint_clrGradient(this) (gfxprint_clrFlag(this, GFXPRINT_FLAG_GRADIENT))
+#define gfxprint_isGradient(g) (gfxprint_isFlagOn(g, GFXPRINT_FLAG_GRADIENT))
+#define gfxprint_setGradient(g) (gfxprint_setFlag(g, GFXPRINT_FLAG_GRADIENT))
+#define gfxprint_clrGradient(g) (gfxprint_clrFlag(g, GFXPRINT_FLAG_GRADIENT))
 
-#define gfxprint_isShadow(this) (gfxprint_isFlagOn(this, GFXPRINT_FLAG_SHADOW))
-#define gfxprint_setShadow(this) (gfxprint_setFlag(this, GFXPRINT_FLAG_SHADOW))
-#define gfxprint_clrShadow(this) (gfxprint_clrFlag(this, GFXPRINT_FLAG_SHADOW))
+#define gfxprint_isShadow(g) (gfxprint_isFlagOn(g, GFXPRINT_FLAG_SHADOW))
+#define gfxprint_setShadow(g) (gfxprint_setFlag(g, GFXPRINT_FLAG_SHADOW))
+#define gfxprint_clrShadow(g) (gfxprint_clrFlag(g, GFXPRINT_FLAG_SHADOW))
 
-#define gfxprint_isChanged(this) (gfxprint_isFlagOn(this, GFXPRINT_FLAG_CHANGED))
-#define gfxprint_setChanged(this) (gfxprint_setFlag(this, GFXPRINT_FLAG_CHANGED))
-#define gfxprint_clrChanged(this) (gfxprint_clrFlag(this, GFXPRINT_FLAG_CHANGED))
+#define gfxprint_isChanged(g) (gfxprint_isFlagOn(g, GFXPRINT_FLAG_CHANGED))
+#define gfxprint_setChanged(g) (gfxprint_setFlag(g, GFXPRINT_FLAG_CHANGED))
+#define gfxprint_clrChanged(g) (gfxprint_clrFlag(g, GFXPRINT_FLAG_CHANGED))
 
-static void gfxprint_setup(gfxprint_t* this);
-static void gfxprint_putc1(gfxprint_t* this, char c);
-static void* gfxprint_prout(void* this, const char* buffer, int n);
+static void gfxprint_setup(gfxprint_t* gprint);
+static void gfxprint_putc1(gfxprint_t* gprint, char c);
+static void* gfxprint_prout(void* gprint, const char* buffer, int n);
 
-extern void gfxprint_color(gfxprint_t* this, u32 r, u32 g, u32 b, u32 a);
+extern void gfxprint_color(gfxprint_t* gprint, u32 r, u32 g, u32 b, u32 a);
 
-extern void gfxprint_locate(gfxprint_t* this, int x, int y); 
-extern void gfxprint_locate8x8(gfxprint_t* this, int x, int y);
-extern void gfxprint_setoffset(gfxprint_t* this, int x, int y);
+extern void gfxprint_locate(gfxprint_t* gprint, int x, int y); 
+extern void gfxprint_locate8x8(gfxprint_t* gprint, int x, int y);
+extern void gfxprint_setoffset(gfxprint_t* gprint, int x, int y);
 
-extern void gfxprint_putc(gfxprint_t* this, char c);
-extern void gfxprint_write(gfxprint_t* this, const void* buffer, size_t size, size_t n);
-extern void gfxprint_puts(gfxprint_t* this, char* string);
+extern void gfxprint_putc(gfxprint_t* gprint, char c);
+extern void gfxprint_write(gfxprint_t* gprint, const void* buffer, size_t size, size_t n);
+extern void gfxprint_puts(gfxprint_t* gprint, char* string);
 
-extern void gfxprint_init(gfxprint_t* this);
-extern void gfxprint_cleanup(gfxprint_t* this);
+extern void gfxprint_init(gfxprint_t* gprint);
+extern void gfxprint_cleanup(gfxprint_t* gprint);
 
-extern void gfxprint_open(gfxprint_t* this, Gfx* glistp);
-extern Gfx* gfxprint_close(gfxprint_t* this);
+extern void gfxprint_open(gfxprint_t* gprint, Gfx* glistp);
+extern Gfx* gfxprint_close(gfxprint_t* gprint);
 
-extern int gfxprint_vprintf(gfxprint_t* this, const char* fmt, va_list ap);
-extern int gfxprint_printf(gfxprint_t* this, const char* fmt, ...);
+extern int gfxprint_vprintf(gfxprint_t* gprint, const char* fmt, va_list ap);
+extern int gfxprint_printf(gfxprint_t* gprint, const char* fmt, ...);
 
 /* Custom macro to match gDPLoadTLUT_pal16 but with N palette entries */
 #define gDPLoadTLUT_palX(pkt, pal, dram, count)				\

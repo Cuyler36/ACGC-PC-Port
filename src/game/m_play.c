@@ -42,6 +42,7 @@
 #ifdef TARGET_PC
 #include "pc_diag.h"
 #include "pc_platform.h"
+#include "pc_mod_api.h"
 #endif
 
 #define Game_play_HYRAL_SIZE 0x3E800 // 256,000 bytes
@@ -488,6 +489,15 @@ extern void play_init(GAME* game) {
     mMmd_MakeMuseumDisplayData();
     Actor_info_ct(game, &play->actor_info, play->player_data);
     play->draw_chk_proc = none_proc1;
+
+#ifdef TARGET_PC
+    OSReport("[PC] play_init: enter\n");
+#endif
+
+#ifdef TARGET_PC
+    pc_mod_on_init();
+#endif
+
     mMsg_ct(game);
     mEv_2nd_init(&play->event);
     mTD_player_keydata_init(play);
@@ -859,6 +869,11 @@ extern void play_main(GAME* game) {
     GAME_PLAY* play = (GAME_PLAY*)game;
 
     PC_DIAG(5, "play_main: enter scene=%d frame=%d\n", play->scene_id, play->game_frame);
+
+#ifdef TARGET_PC
+    pc_mod_on_begin_frame();
+#endif
+
     game->doing_point = 0;
     game->doing_point_specific = 0x6E;
     fqrand();
@@ -890,11 +905,25 @@ extern void play_main(GAME* game) {
     game->doing_point_specific = 0x8C;
 
     if ((GETREG(HREG, 80) != 10) || (GETREG(HREG, 81) != 0)) {
+#ifdef TARGET_PC
+        pc_mod_on_pre_move();
+#endif
         Game_play_move(game);
+#ifdef TARGET_PC
+        pc_mod_on_post_move();
+#endif
     }
     game->doing_point = 0;
     game->doing_point_specific = 0xAA;
+#ifdef TARGET_PC
+    pc_mod_on_pre_draw();
+#endif
+
     Game_play_draw(play);
+
+#ifdef TARGET_PC
+    pc_mod_on_post_draw();
+#endif
 
     game->doing_point = 0;
     game->doing_point_specific = 0xB4;
@@ -907,6 +936,10 @@ extern void play_main(GAME* game) {
 
     game->doing_point = 0;
     game->doing_point_specific = 0XBe;
+
+#ifdef TARGET_PC
+    pc_mod_on_end_frame();
+#endif
 }
 
 static void Gameplay_Scene_Init(GAME_PLAY* play) {

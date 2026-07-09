@@ -77,6 +77,7 @@ include_directories(
     # Project root needed for includes like "src/actor/npc/event/file.c_inc"
     ${DECOMP_ROOT}
     ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/mod
     ${CMAKE_CURRENT_SOURCE_DIR}/lib/glad/include
     ${CMAKE_CURRENT_SOURCE_DIR}/lib/fixnes
     # .inc assets are loaded at runtime from disc image (no build/GAFE01_00 needed)
@@ -419,8 +420,17 @@ endif()
 # Mod runtime sources
 # =============================================================================
 set(MOD_SOURCES
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/pc_mod.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/pc_mod_host.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/mod/host.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/mod/api.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/mod/lua_internal.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/mod/actor_api.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/mod/player_api.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/mod/item_api.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/mod/item_slot_api.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/mod/private_api.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/mod/animal_api.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/mod/town_api.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/mod/save_api.cpp
 )
 list(APPEND PC_SOURCES ${MOD_SOURCES})
 
@@ -465,6 +475,15 @@ add_custom_command(TARGET ac_pc POST_BUILD
         "${CMAKE_CURRENT_SOURCE_DIR}/shaders/default.frag"
         "${CMAKE_BINARY_DIR}/bin/shaders/"
     COMMENT "Copying shader files to bin/shaders/"
+)
+
+# Merge shipped mods into bin/mods/ (overwrite repo files, keep local-only mods)
+add_custom_command(TARGET ac_pc POST_BUILD
+    COMMAND ${CMAKE_COMMAND}
+        -Dsrc="${CMAKE_CURRENT_SOURCE_DIR}/mods"
+        -Ddst="${CMAKE_BINARY_DIR}/bin/mods"
+        -P "${CMAKE_CURRENT_SOURCE_DIR}/cmake/copy_mods.cmake"
+    COMMENT "Syncing mods to bin/mods/ (merge)"
 )
 
 # Copy SDL2.dll next to executable so users don't need it on PATH
@@ -515,4 +534,7 @@ install(TARGETS ac_pc RUNTIME DESTINATION bin)
 install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/shaders/"
     DESTINATION bin/shaders
     FILES_MATCHING PATTERN "*.vert" PATTERN "*.frag"
+)
+install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/mods/"
+    DESTINATION bin/mods
 )

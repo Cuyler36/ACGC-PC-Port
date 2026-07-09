@@ -17,84 +17,84 @@ Gfx fbdemo_fade_gfx_init[] = {
     gsSPEndDisplayList(),
 };
 
-fbdemo_fade* fbdemo_fade_init(fbdemo_fade* this) {
-  bzero(this, sizeof(fbdemo_fade));
-  return this;
+fbdemo_fade* fbdemo_fade_init(fbdemo_fade* fade) {
+  bzero(fade, sizeof(fbdemo_fade));
+  return fade;
 }
 
-void fbdemo_fade_move(fbdemo_fade* this, int rate) {
+void fbdemo_fade_move(fbdemo_fade* fade, int rate) {
   static f32 fade_timer_accum = 0.0f;
   static f32 fade_frame_accum = 0.0f;
   f32 dt = (f32)gamePT->graph->dt_num_60fps_frames;
   f32 ftimer;
   int alpha;
 
-  if (this->timer != 0) {
+  if (fade->timer != 0) {
     fade_timer_accum += dt;
     int steps = (int)fade_timer_accum;
     fade_timer_accum -= (f32)steps;
-    while (steps > 0 && this->timer > 0) {
-      this->timer -= 1;
+    while (steps > 0 && fade->timer > 0) {
+      fade->timer -= 1;
       steps--;
     }
     return;
   }
 
-  if (this->type != 7) {
+  if (fade->type != 7) {
     fade_frame_accum += (f32)rate * dt;
     int steps = (int)fade_frame_accum;
     fade_frame_accum -= (f32)steps;
-    this->frame += steps;
-    if (this->frame >= Common_Get(transition).fade_rate) {
-      this->frame = Common_Get(transition).fade_rate;
-      this->isDone = 1;
+    fade->frame += steps;
+    if (fade->frame >= Common_Get(transition).fade_rate) {
+      fade->frame = Common_Get(transition).fade_rate;
+      fade->isDone = 1;
     }
-    ftimer = (f32)this->frame;
+    ftimer = (f32)fade->frame;
     if (ftimer < 0.0f) {
       ftimer = 0.0f;
     }
 
     alpha = (255.0f * ftimer) / Common_Get(transition).fade_rate;
-    if (this->type == 1) {
-      this->color.a = 255 - alpha;
+    if (fade->type == 1) {
+      fade->color.a = 255 - alpha;
     } else {
-      this->color.a = alpha;
+      fade->color.a = alpha;
     }
   }
 }
 
-void fbdemo_fade_draw(fbdemo_fade* this, Gfx** gfxP) {
+void fbdemo_fade_draw(fbdemo_fade* fade, Gfx** gfxP) {
   Gfx* gfx;
-  if (this->color.a != 0) {
+  if (fade->color.a != 0) {
     gfx = *gfxP;
     gSPDisplayList(gfx++, fbdemo_fade_gfx_init);
-    gDPSetPrimColor(gfx++, 0, 0, this->color.r, this->color.g, this->color.b,
-                    this->color.a);
+    gDPSetPrimColor(gfx++, 0, 0, fade->color.r, fade->color.g, fade->color.b,
+                    fade->color.a);
     gDPFillRectangle(gfx++, 0, 0, N64_SCREEN_WIDTH * 2, N64_SCREEN_HEIGHT * 2);
     gDPPipeSync(gfx++);
     *gfxP = gfx;
   }
 }
 
-void fbdemo_fade_startup(fbdemo_fade* this) {
+void fbdemo_fade_startup(fbdemo_fade* fade) {
   static s8 start_frame[] = {0x00, 0xFA, 0x00, 0x00, 0x00, 0x00, 0xAB, 0x00,
                              0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
   static u8 start_color[] = {0x00, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
                              0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
-  this->color.a = start_color[this->type];
-  this->frame = start_frame[this->type];
-  this->isDone = 0;
-  if (this->type == 1) {
-    this->timer = 10;
+  fade->color.a = start_color[fade->type];
+  fade->frame = start_frame[fade->type];
+  fade->isDone = 0;
+  if (fade->type == 1) {
+    fade->timer = 10;
   }
 }
 
-void fbdemo_fade_settype(fbdemo_fade* this, int type) { this->type = type; }
+void fbdemo_fade_settype(fbdemo_fade* fade, int type) { fade->type = type; }
 
-void fbdemo_fade_setcolor_rgba8888(fbdemo_fade* this, u32 color) {
-  this->color.rgba = color;
+void fbdemo_fade_setcolor_rgba8888(fbdemo_fade* fade, u32 color) {
+  fade->color.rgba = color;
 }
 
-u8 fbdemo_fade_is_finish(fbdemo_fade* this) { return this->isDone; }
+u8 fbdemo_fade_is_finish(fbdemo_fade* fade) { return fade->isDone; }

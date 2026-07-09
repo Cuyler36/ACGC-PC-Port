@@ -323,6 +323,7 @@ int main(int argc, char* argv[]) {
     pc_keybindings_load();
     pc_platform_init();
     pc_mod_init();
+    pc_mod_load_all();
     pc_disc_init();
     if (!pc_assets_init()) {
         const char* msg =
