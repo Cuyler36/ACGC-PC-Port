@@ -245,3 +245,30 @@ extern void mNPS_set_all_schedule_area() {
 
   mNPS_schedule_manager();
 }
+
+extern void mNPS_SyncNpcSchedule(int animal_index) {
+    Animal_c* animal;
+    mNPS_schedule_c* schedule;
+
+    if (animal_index < 0 || animal_index >= ANIMAL_NUM_MAX) {
+        return;
+    }
+
+    animal = Save_GetPointer(animals[animal_index]);
+    if (mNpc_CheckFreeAnimalInfo(animal)) {
+        return;
+    }
+
+#ifdef TARGET_PC
+    if (animal->id.looks >= mNpc_LOOKS_NUM) {
+        return;
+    }
+#endif
+
+    schedule = Common_GetPointer(npc_schedule[animal_index]);
+    schedule->id = &animal->id;
+    schedule->data_table = mNPS_schedule[animal->id.looks];
+    schedule->forced_timer = 0;
+
+    mNPS_schedule_manager(); // sets current_type from time-of-day
+}

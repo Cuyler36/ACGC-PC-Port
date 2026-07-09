@@ -7,6 +7,8 @@
 extern "C" {
 #endif
 
+#define PC_MOD_ANIMAL_INDEX_INVALID (-1)
+
 #define PC_MOD_ANIMAL_MT "PcModAnimal"
 #define PC_MOD_ANIMAL_ITER_MT "PcModAnimalIter"
 #define PC_MOD_ANIMAL_MODULE_MT "PcModAnimalModule"

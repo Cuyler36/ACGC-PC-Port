@@ -86,6 +86,9 @@ struct set_npc_manager_actor_s {
     f32 walk_accum;
 };
 
+extern void aSNMgr_RefreshAnimalInManager(GAME_PLAY* play, int animal_index);
+extern void aSNMgr_UnregisterAnimalInManager(GAME_PLAY* play, int animal_index);
+
 extern ACTOR_PROFILE Set_Npc_Manager_Profile;
 
 #ifdef __cplusplus

@@ -726,3 +726,25 @@ extern int mNpcW_GetNearGate(int* target_ut_x, int* target_ut_z, int block_x, in
 
   return res;
 }
+
+extern int mNpcW_RegisterAnimal(int animal_index) {
+    mNpc_walk_c* walk = Common_GetPointer(npc_walk);
+    Animal_c* animal = Save_GetPointer(animals[animal_index]);
+    mNpcW_info_c* info;
+    int free_idx;
+    if (mNpc_CheckFreeAnimalInfo(animal)) {
+        return -1;
+    }
+    if (mNpcW_GetNpcWalkInfoIdx(walk->info, mNpcW_MAX, &animal->id) != -1) {
+        return 0; // already registered
+    }
+    free_idx = mNpcW_GetFreeNpcWalkInfoIdx(walk->info, mNpcW_MAX);
+    if (free_idx == -1) {
+        return -1;
+    }
+    info = &walk->info[free_idx];
+    mNpcW_SetNpcWalkInfo(info, animal, animal_index);
+    walk->used_idx_bitfield |= (1 << animal_index);
+    mNpcW_SetGoalBlock(info);
+    return 0;
+}

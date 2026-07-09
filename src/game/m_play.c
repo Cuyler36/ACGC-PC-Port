@@ -871,7 +871,7 @@ extern void play_main(GAME* game) {
     PC_DIAG(5, "play_main: enter scene=%d frame=%d\n", play->scene_id, play->game_frame);
 
 #ifdef TARGET_PC
-    pc_mod_on_begin_frame();
+    pc_mod_on_begin_frame(play->game.graph->dt);
 #endif
 
     game->doing_point = 0;
@@ -906,23 +906,23 @@ extern void play_main(GAME* game) {
 
     if ((GETREG(HREG, 80) != 10) || (GETREG(HREG, 81) != 0)) {
 #ifdef TARGET_PC
-        pc_mod_on_pre_move();
+        pc_mod_on_pre_move(play->game.graph->dt);
 #endif
         Game_play_move(game);
 #ifdef TARGET_PC
-        pc_mod_on_post_move();
+        pc_mod_on_post_move(play->game.graph->dt);
 #endif
     }
     game->doing_point = 0;
     game->doing_point_specific = 0xAA;
 #ifdef TARGET_PC
-    pc_mod_on_pre_draw();
+    pc_mod_on_pre_draw(play->game.graph->dt);
 #endif
 
     Game_play_draw(play);
 
 #ifdef TARGET_PC
-    pc_mod_on_post_draw();
+    pc_mod_on_post_draw(play->game.graph->dt);
 #endif
 
     game->doing_point = 0;
@@ -935,10 +935,10 @@ extern void play_main(GAME* game) {
     }
 
     game->doing_point = 0;
-    game->doing_point_specific = 0XBe;
+    game->doing_point_specific = 0xBE;
 
 #ifdef TARGET_PC
-    pc_mod_on_end_frame();
+    pc_mod_on_end_frame(play->game.graph->dt);
 #endif
 }
 

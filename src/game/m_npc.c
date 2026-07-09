@@ -155,6 +155,12 @@ static mNpc_Sp_Npc_Name_c l_sp_actor_name[] = {
 static u8 l_no_name_npc_name[ANIMAL_NAME_LEN] = { 0xD4, 0x8E, 0xA6, 0x90, 0x85, 0x42 }; // never translated
 static u8 l_no_ending_npc_ending[ANIMAL_CATCHPHRASE_LEN] = { 0xD3, 0xAF, 0x9D, 0x20 };  // never translated
 
+// @TODO (MODDING): We don't want to return a hardcoded value here. We should
+// hook it up to a variable later which is incremented by mod developers.
+extern int mNpc_GetNpcNumMax(void) {
+    return NPC_NUM;
+}
+
 static void mNpc_MakeRandTable(int* table, int count, int swap_num) {
     int a;
     int b;
@@ -2339,6 +2345,23 @@ static void mNpc_SetHaveAppeared(mActor_name_t npc_id) {
     }
 }
 
+extern void mNpc_ClearHaveAppeared(mActor_name_t npc_id) {
+    u8* used_tbl = Save_Get(npc_used_tbl);
+    int idx;
+    int i;
+
+    if (ITEM_NAME_GET_TYPE(npc_id) == NAME_TYPE_NPC) {
+        idx = npc_id & 0xFFF;
+        i = idx / 8;
+        
+        if (i < ARRAY_COUNT(Save_Get(npc_used_tbl))) {
+            used_tbl += i;
+            idx = idx & 7u;
+            *used_tbl &= ~(1 << idx);
+        }
+    }
+}
+
 static int mNpc_GetHaveAppeared_idx(int idx) {
     u8* used_tbl = Save_Get(npc_used_tbl);
     int i = idx / 8;
@@ -3755,6 +3778,95 @@ extern void mNpc_SetReturnAnimal(Animal_c* return_animal) {
     }
 }
 
+static int mNpc_TryBuildHouse(Animal_c* animal, u8 bx, u8 bz, u8 ux, u8 uz) {
+    u8 build_bx;
+    u8 build_bz;
+    u8 build_uz;
+
+    if (animal == NULL || mNpc_CheckFreeAnimalInfo(animal)) {
+        return -1;
+    }
+
+    // Already has a placed home
+    if (animal->home_info.block_x != 0xFF || animal->home_info.block_z != 0xFF) {
+        return -1;
+    }
+
+    build_bx = bx - 1;
+    build_bz = bz - 1;
+    build_uz = uz - 1;
+
+    if (!mNpc_CheckBuildHouse(build_bx, build_bz, ux, build_uz)) {
+        return -1;
+    }
+
+    animal->home_info.block_x = bx;
+    animal->home_info.block_z = bz;
+    animal->home_info.ut_x = ux;
+    animal->home_info.ut_z = uz;
+
+    mNpc_BuildHouseBeforeFieldct(animal->id.npc_id, build_bx, build_bz, ux, build_uz);
+    return 0;
+}
+
+extern int mNpc_TryBuildHouseAt(int animal_index, u8 bx, u8 bz, u8 ux, u8 uz) {
+    if (animal_index < 0 || animal_index >= ANIMAL_NUM_MAX) {
+        return -1;
+    }
+
+    return mNpc_TryBuildHouse(Save_GetPointer(animals[animal_index]), bx, bz, ux, uz);
+}
+
+extern int mNpc_TryBuildHouseForAnimal(int animal_index) {
+    static Anmhome_c reserved[60];
+    u8 reserved_num = 0;
+    Animal_c* animal;
+    Anmhome_c* home;
+    int i;
+
+    if (animal_index < 0 || animal_index >= ANIMAL_NUM_MAX) {
+        return -1;
+    }
+
+    animal = Save_GetPointer(animals[animal_index]);
+    if (mNpc_CheckFreeAnimalInfo(animal)) {
+        return -1;
+    }
+
+    // During gameplay, prefer AfterFieldct with live block bounds.
+    // BeforeFieldct is what mNpc_InitNpcData uses at town load.
+    mNpc_MakeReservedListBeforeFieldct(reserved, ARRAY_COUNT(reserved), &reserved_num);
+    if (reserved_num == 0) {
+        return -1;
+    }
+
+    for (i = 0; i < reserved_num; i++) {
+        home = &reserved[i];
+
+        // Reserved list uses ut_z without the +1 that home_info stores
+        if (mNpc_TryBuildHouse(animal, home->block_x, home->block_z, home->ut_x, home->ut_z + 1) == 0) {
+            if (mFI_CheckFieldData()) {
+                mFI_SetFGUpData();
+            }
+            return 0;
+        }
+    }
+
+    return -1;
+}
+
+extern void mNpc_SyncNpcListEntry(int animal_index) {
+    if (animal_index < 0 || animal_index >= ANIMAL_NUM_MAX) {
+        return;
+    }
+
+    mNpc_SetNpcList(
+        Common_GetPointer(npclist[animal_index]),
+        Save_GetPointer(animals[animal_index]),
+        1,
+        FALSE);
+}
+
 extern void mNpc_AddActor_inBlock(mFM_move_actor_c* move_actor_list, u8 bx, u8 bz) {
     mNpc_AddNpc_inBlock(move_actor_list, bx, bz);
 }
@@ -4466,6 +4578,63 @@ extern void mNpc_Grow() {
             mNpc_RenewRemoveHistory();
         }
     }
+}
+
+extern int mNpc_AddNpc(mActor_name_t npc_id) {
+    int idx = -1;
+    
+    if (mNpc_GET_IDX(npc_id) < mNpc_GetNpcNumMax()) {
+        idx = mNpc_UseFreeAnimalInfo(Save_Get(animals), ANIMAL_NUM_MAX);
+
+        if (idx != -1) {
+            Animal_c* animal = Save_GetPointer(animals[idx]);
+    
+            mNpc_SetAnimalInfoNpcIdx(animal, mNpc_GET_IDX(npc_id));
+            mNpc_SetHaveAppeared(npc_id);
+            mNpc_SetNpcNameID(animal, 1);
+            mNpc_AddNowNpcMax(Save_GetPointer(now_npc_max));
+            mNpc_RenewRemoveHistory();
+            animal->moved_in = TRUE;
+        }
+    }
+
+    return idx;
+}
+
+extern int mNpc_RemoveNpcByIdx(int idx, int sendGoodbyeMail) {
+    if (idx != -1) {
+        Animal_c* animal = Save_GetPointer(animals[idx]);
+
+        mNpc_DestroyHouse(&animal->home_info);
+
+        if (sendGoodbyeMail) {
+            mNpc_SetGoodbyAnimalMail(&l_mnpc_goodby_mail, &animal->id);
+            mNpc_SendRegisteredGoodbyMail();
+        }
+
+        mNpc_ClearAnimalInfo(animal);
+        mNpc_SubNowNpcMax(Save_GetPointer(now_npc_max));
+        mNpc_RenewRemoveHistory();
+    }
+
+    return idx;
+}
+
+extern int mNpc_RemoveNpc(mActor_name_t npc_id, int sendGoodbyeMail) {
+    Animal_c* animal = Save_Get(animals);
+    int idx = -1;
+    int i;
+
+    for (i = 0; i < ANIMAL_NUM_MAX; i++) {
+        if (!mNpc_CheckFreeAnimalInfo(animal) && animal->id.npc_id == npc_id) {
+            idx = i;
+            break;
+        }
+
+        animal++;
+    }
+
+    return mNpc_RemoveNpcByIdx(idx, sendGoodbyeMail);
 }
 
 extern void mNpc_ForceRemove() {

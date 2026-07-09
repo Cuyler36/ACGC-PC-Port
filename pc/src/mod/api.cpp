@@ -57,6 +57,7 @@ BIND_FN(premove)
 BIND_FN(postmove)
 BIND_FN(predraw)
 BIND_FN(postdraw)
+BIND_FN(saveload)
 
 static const luaL_Reg bindlib[] = {
     { "load",       l_bind_load },
@@ -67,6 +68,7 @@ static const luaL_Reg bindlib[] = {
     { "postmove",   l_bind_postmove },
     { "predraw",    l_bind_predraw },
     { "postdraw",   l_bind_postdraw },
+    { "saveload",   l_bind_saveload },
     { nullptr, nullptr },
 };
 
@@ -83,7 +85,7 @@ void pc_mod_register_api(lua_State* L) {
     pc_mod_register_save_api(L);
 }
 
-void pc_mod_dispatch(const char* event) {
+static void pc_mod_dispatch_impl(const char* event, int pass_dt, float dt) {
     if (!g_mod_L) return;
 
     lua_State* L = g_mod_L;
@@ -99,7 +101,13 @@ void pc_mod_dispatch(const char* event) {
         lua_rawgeti(L, -2, i);
         lua_xmove(L, thread, 1);
 
-        if (lua_pcall(thread, 0, 0, 0) != LUA_OK) {
+        int nargs = 0;
+        if (pass_dt) {
+            lua_pushnumber(thread, dt);
+            nargs = 1;
+        }
+
+        if (lua_pcall(thread, nargs, 0, 0) != LUA_OK) {
             fprintf(stderr, "[mod] bind.%s err: %s\n", event, lua_tostring(thread, -1));
             lua_pop(thread, 1);
         }
@@ -108,13 +116,21 @@ void pc_mod_dispatch(const char* event) {
     lua_pop(L, 1); // event table
 }
 
-void pc_mod_on_load(void)       { pc_mod_dispatch("load"); }
-void pc_mod_on_init(void)       { pc_mod_dispatch("init"); }
-void pc_mod_on_begin_frame(void){ pc_mod_dispatch("beginframe"); }
-void pc_mod_on_end_frame(void)  { pc_mod_dispatch("endframe"); }
-void pc_mod_on_pre_move(void)   { pc_mod_dispatch("premove"); }
-void pc_mod_on_post_move(void)  { pc_mod_dispatch("postmove"); }
-void pc_mod_on_pre_draw(void)   { pc_mod_dispatch("predraw"); }
-void pc_mod_on_post_draw(void)  { pc_mod_dispatch("postdraw"); }
+void pc_mod_dispatch(const char* event) {
+    pc_mod_dispatch_impl(event, 0, 0.0f);
+}
 
+void pc_mod_dispatch_dt(const char* event, float dt) {
+    pc_mod_dispatch_impl(event, 1, dt);
+}
+
+void pc_mod_on_load(void)        { pc_mod_dispatch("load"); }
+void pc_mod_on_init(void)        { pc_mod_dispatch("init"); }
+void pc_mod_on_begin_frame(float dt) { pc_mod_dispatch_dt("beginframe", dt); }
+void pc_mod_on_end_frame(float dt)   { pc_mod_dispatch_dt("endframe", dt); }
+void pc_mod_on_pre_move(float dt)    { pc_mod_dispatch_dt("premove", dt); }
+void pc_mod_on_post_move(float dt)   { pc_mod_dispatch_dt("postmove", dt); }
+void pc_mod_on_pre_draw(float dt)    { pc_mod_dispatch_dt("predraw", dt); }
+void pc_mod_on_post_draw(float dt)   { pc_mod_dispatch_dt("postdraw", dt); }
+void pc_mod_on_save_load(void)   { pc_mod_dispatch("saveload"); }
 }

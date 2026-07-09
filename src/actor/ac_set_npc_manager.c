@@ -1280,3 +1280,68 @@ static void aSNMgr_actor_move(ACTOR* actorx, GAME* game) {
     aSNMgr_make_npc(manager, play);
     aSNMgr_reset_npc(manager);
 }
+
+extern void aSNMgr_RefreshAnimalInManager(GAME_PLAY* play, int animal_index) {
+    SET_NPC_MANAGER_ACTOR* manager;
+    Animal_c* animal;
+    ACTOR* actor;
+    int walk_idx;
+
+    if (play == NULL || animal_index < 0 || animal_index >= ANIMAL_NUM_MAX) {
+        return;
+    }
+
+    actor = Actor_info_name_search(&play->actor_info, mAc_PROFILE_SET_NPC_MANAGER, ACTOR_PART_CONTROL);
+    if (actor == NULL) {
+        return; // not in the field scene yet
+    }
+
+    manager = (SET_NPC_MANAGER_ACTOR*)actor;
+    animal = Save_GetPointer(animals[animal_index]);
+
+    if (mNpc_CheckFreeAnimalInfo(animal)) {
+        return;
+    }
+
+    manager->npc_info.exist |= (1 << animal_index);
+    manager->npc_info.list_p[animal_index].appear_flag = TRUE;
+
+    // Re-link walk info for this slot (mirrors aSNMgr_init_winfo_p for one index)
+    walk_idx = mNpcW_GetNpcWalkInfoIdx(
+        manager->npc_info.walk_p->info, mNpc_EVENT_NPC_NUM, &animal->id);
+
+    manager->npc_info.winfo_p[animal_index] =
+        (walk_idx != -1) ? &manager->npc_info.walk_p->info[walk_idx] : NULL;
+
+    // Clear "already spawned" bit so manager will try to create them
+    manager->npc_info.appear &= ~(1 << animal_index);
+}
+
+extern void aSNMgr_UnregisterAnimalInManager(GAME_PLAY* play, int animal_index) {
+    SET_NPC_MANAGER_ACTOR* manager;
+    ACTOR* actor;
+    mNpc_NpcList_c* list;
+    aSNMgr_make_c* make;
+    int i;
+    if (play == NULL || animal_index < 0 || animal_index >= ANIMAL_NUM_MAX) {
+        return;
+    }
+    actor = Actor_info_name_search(&play->actor_info, mAc_PROFILE_SET_NPC_MANAGER, ACTOR_PART_CONTROL);
+    if (actor == NULL) {
+        return;
+    }
+    manager = (SET_NPC_MANAGER_ACTOR*)actor;
+    manager->npc_info.exist &= ~(1u << animal_index);
+    manager->npc_info.appear &= ~(1u << animal_index);
+    manager->npc_info.winfo_p[animal_index] = NULL;
+    manager->npc_info.timer[animal_index] = 0;
+    list = &manager->npc_info.list_p[animal_index];
+    list->name = EMPTY_NO;
+    list->appear_flag = FALSE;
+    make = manager->npc_info.make;
+    for (i = 0; i < aSNMgr_EVENT_NORMAL_NPC_NUM; i++, make++) {
+        if (make->idx == animal_index) {
+            aSNMgr_clear_make_npc(make, 1);
+        }
+    }
+}

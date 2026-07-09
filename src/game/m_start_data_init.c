@@ -24,6 +24,7 @@
 #include "m_event.h"
 #include "m_common_data.h"
 #include "m_design_ovl.h"
+#include "mod/pc_mod_api.h"
 
 static void famicom_emu_initial_common_data() {
     // stubbed
@@ -595,6 +596,9 @@ extern void mSDI_StartInitAfter(GAME* game, int renew_mode, int malloc_flag) {
     mFI_SetClimate(mFI_CLIMATE_0);
     mISL_RestoreIsland();
     mNpc_SendHPMail();
+
+    // Call mod savefile->load event
+    pc_mod_on_save_load();
 }
 
 typedef int (*mSDI_INIT_PROC)(GAME*, int, int);
