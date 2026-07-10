@@ -49,6 +49,13 @@ declare actor: {
 declare player: {
 	get: () -> Actor?,
 	get_item_kind: () -> number?,
+	-- Plays a player body animation by index (0 .. GetAnimationCount()-1) or name
+	-- (e.g. "light_on1", "WAIT1"). Puts the player in wait, then applies the clip
+	-- after the actor update so it is not overwritten. Stick input returns control.
+	-- Options: loop (default false), speed (default 0.5), morph (default -5).
+	PlayAnimation: (anim: number | string, options: { loop: boolean?, speed: number?, morph: number? }?) -> boolean,
+	GetAnimationName: (index: number) -> string?,
+	GetAnimationCount: () -> number,
 }
 
 export type ItemKind =
@@ -109,6 +116,63 @@ export type ItemSlot = {
 
 export type Pockets = { [number]: ItemSlot }
 
+export type QuestType = "delivery" | "errand" | "contest" | "none" | string
+
+export type QuestTimeLimit = {
+	year: number,
+	month: number,
+	day: number,
+	hour: number,
+	minute: number,
+	second: number,
+}
+
+export type DeliveryQuest = {
+	-- 1-based pocket/delivery slot
+	Index: number,
+	Type: QuestType,
+	Kind: number,
+	Progress: number,
+	TimeLimitEnabled: boolean,
+	TimeLimit: QuestTimeLimit?,
+	IsActive: boolean,
+	RecipientNpcId: number?,
+	SenderNpcId: number?,
+	Clear: (self: DeliveryQuest) -> (),
+}
+
+export type ErrandQuest = {
+	-- 1-based errand slot
+	Index: number,
+	Type: QuestType,
+	Kind: number,
+	Progress: number,
+	TimeLimitEnabled: boolean,
+	TimeLimit: QuestTimeLimit?,
+	IsActive: boolean,
+	RecipientNpcId: number?,
+	SenderNpcId: number?,
+	Item: Item,
+	-- 1-based pocket index, or nil
+	PocketsIdx: number?,
+	ErrandType: number,
+	Clear: (self: ErrandQuest) -> (),
+}
+
+export type ContestQuest = {
+	AnimalIndex: number,
+	Type: QuestType,
+	Kind: number,
+	Progress: number,
+	TimeLimitEnabled: boolean,
+	TimeLimit: QuestTimeLimit?,
+	IsActive: boolean,
+	RequestedItem: Item,
+	PlayerName: string?,
+	ContestDataType: number,
+	Clear: (self: ContestQuest) -> (),
+}
+
 export type Private = {
 	Index: number,
 	Valid: boolean,
@@ -117,6 +181,9 @@ export type Private = {
 	Loan: number,
 	Pockets: Pockets,
 	Equipped: Item,
+	-- 1-based; slot i mirrors pocket i for delivery quests
+	Deliveries: { [number]: DeliveryQuest },
+	Errands: { [number]: ErrandQuest },
 }
 
 declare Private: {
@@ -139,6 +206,7 @@ export type Animal = {
 	NpcId: number,
 	Name: string,
 	Home: AnimalHome,
+	Contest: ContestQuest,
 	-- Errors if this is the last villager. Invalidates this handle afterward.
 	Delete: (self: Animal) -> (),
 }
@@ -172,4 +240,91 @@ export type Town = {
 declare Town: {
 	current: () -> Town?,
 	isReady: () -> boolean,
+}
+
+declare Message: {
+	-- True while dialogue text is actively on screen.
+	IsOpen: () -> boolean,
+	-- True when the window is fully closed (HIDE or WAIT) and can be opened.
+	CanOpen: () -> boolean,
+	-- Current message table index, or 0 outside gameplay.
+	GetMsgId: () -> number,
+	-- Opens from HIDE (cold start) or WAIT (after Close). clearFlag clears cursor state on WAIT reopen.
+	Open: (clearFlag: boolean?) -> boolean,
+	-- Closes an active message. Returns false if nothing is open or the request is rejected.
+	Close: () -> boolean,
+	-- Loads a message by table index without opening the window. Returns false if the id is invalid.
+	SetMsgId: (msgId: number) -> boolean,
+	-- SetMsgId then Open. Returns false if either step fails.
+	OpenWithId: (msgId: number) -> boolean,
+}
+
+export type GotoSceneOptions = {
+	-- Spawn position in the destination scene. Defaults to a known entry point.
+	x: number?,
+	y: number?,
+	z: number?,
+	-- Exit facing (mSc_DIRECT_*, 0-7). Default depends on the scene.
+	facing: number?,
+	-- Wipe type (WIPE_TYPE_*). Default is fade-to-black.
+	wipe: number?,
+	-- If true, request invade player mode during the transition.
+	updatePlayer: boolean?,
+}
+
+-- Scene id (0 .. SCENE_NUM-1) or a friendly name such as "fg", "post_office",
+-- "museum", "nooks_cranny", "needlework". Names are case-insensitive; optional
+-- "scene_" prefix and hyphens/spaces are accepted.
+declare function gotoscene(scene: number | string, options: GotoSceneOptions?): boolean
+
+-- In-game RTC clock. Weekday: 0=Sunday .. 6=Saturday. Month: 1-12.
+declare Time: {
+	GetSecond: () -> number,
+	GetMinute: () -> number,
+	GetHour: () -> number,
+	GetDay: () -> number,
+	GetMonth: () -> number,
+	GetYear: () -> number,
+	GetWeekday: () -> number,
+	-- year, month, day
+	GetDate: () -> (number, number, number),
+	-- hour, minute, second
+	GetTime: () -> (number, number, number),
+	-- year, month, day, hour, minute, second
+	GetDateTime: () -> (number, number, number, number, number, number),
+
+	-- Field setters keep other components. Returns false if the resulting clock is invalid.
+	SetSecond: (second: number) -> boolean,
+	SetMinute: (minute: number) -> boolean,
+	SetHour: (hour: number) -> boolean,
+	SetDay: (day: number) -> boolean,
+	SetMonth: (month: number) -> boolean,
+	SetYear: (year: number) -> boolean,
+	SetDate: (year: number, month: number, day: number) -> boolean,
+	-- second defaults to 0 when omitted.
+	SetTime: (hour: number, minute: number, second: number?) -> boolean,
+	SetDateTime: (year: number, month: number, day: number, hour: number, minute: number, second: number?) -> boolean,
+}
+
+-- Lighthouse period: 0=start day, 1=switch week, 2=reward window, 3=none
+-- Event: 0=none, 1=jan contributed, 2=jan started, 3=feb contributed, 4=feb started
+declare Quest: {
+	Lighthouse: {
+		GetPeriod: () -> number,
+		IsActive: () -> boolean,
+		GetDay: () -> number,
+		GetRenewDate: () -> (number, number, number),
+		GetDaysOn: () -> number,
+		Start: () -> boolean,
+		CanSwitch: () -> boolean,
+		SwitchOn: () -> boolean,
+		PlayerStarted: (playerIndex: number?) -> boolean,
+		PlayerContributed: (playerIndex: number?) -> boolean,
+		PlayerCompleted: (playerIndex: number?) -> boolean,
+		GetEvent: (playerIndex: number?) -> number,
+		ClearEvent: (playerIndex: number?) -> boolean,
+		GetPresentItem: (playerIndex: number?) -> number,
+		Clear: () -> boolean,
+		SetupForSwitch: () -> boolean,
+	},
 }

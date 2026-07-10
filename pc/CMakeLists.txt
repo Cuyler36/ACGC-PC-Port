@@ -432,6 +432,11 @@ set(MOD_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/src/mod/animal_api.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/mod/town_api.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/mod/save_api.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/mod/msg_api.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/mod/scene_api.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/mod/time_api.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/mod/quest_api.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/mod/quest_typed_api.cpp
 )
 list(APPEND PC_SOURCES ${MOD_SOURCES})
 

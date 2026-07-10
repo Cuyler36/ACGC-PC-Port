@@ -3,6 +3,7 @@
 #include "pc_mod_save_internal.h"
 #include "pc_mod_item_internal.h"
 #include "pc_mod_item_slot_internal.h"
+#include "pc_mod_quest_internal.h"
 #include "pc_mod_lua_internal.h"
 #include "lualib.h"
 
@@ -129,6 +130,20 @@ static int l_private_prop_pockets(lua_State* L) {
     return 1;
 }
 
+static int l_private_prop_deliveries(lua_State* L) {
+    PcModPrivateHandle* handle = pc_mod_check_private(L, 1);
+    pc_mod_require_private(L, 1);
+    pc_mod_push_deliveries(L, handle->player_no);
+    return 1;
+}
+
+static int l_private_prop_errands(lua_State* L) {
+    PcModPrivateHandle* handle = pc_mod_check_private(L, 1);
+    pc_mod_require_private(L, 1);
+    pc_mod_push_errands(L, handle->player_no);
+    return 1;
+}
+
 static int l_private_prop_equipped_get(lua_State* L) {
     Private_c* priv = pc_mod_require_private(L, 1);
     pc_mod_push_item(L, priv->equipment);
@@ -147,14 +162,16 @@ static int l_private_prop_equipped_set(lua_State* L) {
 }
 
 static const PcModPropertyDef private_properties[] = {
-    { "Index",    l_private_prop_index,          nullptr },
-    { "Valid",    l_private_prop_valid,          nullptr },
-    { "Wallet",   l_private_prop_wallet_get,     l_private_prop_wallet_set },
-    { "Name",     l_private_prop_name,           nullptr },
-    { "Loan",     l_private_prop_loan,           nullptr },
-    { "Pockets",  l_private_prop_pockets,        nullptr },
-    { "Equipped", l_private_prop_equipped_get,   l_private_prop_equipped_set },
-    { nullptr,    nullptr,                       nullptr },
+    { "Index",      l_private_prop_index,          nullptr },
+    { "Valid",      l_private_prop_valid,          nullptr },
+    { "Wallet",     l_private_prop_wallet_get,     l_private_prop_wallet_set },
+    { "Name",       l_private_prop_name,           nullptr },
+    { "Loan",       l_private_prop_loan,           nullptr },
+    { "Pockets",    l_private_prop_pockets,        nullptr },
+    { "Equipped",   l_private_prop_equipped_get,   l_private_prop_equipped_set },
+    { "Deliveries", l_private_prop_deliveries,     nullptr },
+    { "Errands",    l_private_prop_errands,        nullptr },
+    { nullptr,      nullptr,                       nullptr },
 };
 
 static const luaL_Reg private_module[] = {

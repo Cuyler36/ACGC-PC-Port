@@ -18,6 +18,8 @@ export type Private = {
 	Loan: number,
 	Pockets: Pockets,
 	Equipped: Item,
+	Deliveries: { [number]: DeliveryQuest },
+	Errands: { [number]: ErrandQuest },
 }
 
 declare Private: {

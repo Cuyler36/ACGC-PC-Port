@@ -4,6 +4,10 @@
 #include "pc_mod_player_api.h"
 #include "pc_mod_item_api.h"
 #include "pc_mod_save_api.h"
+#include "pc_mod_msg_api.h"
+#include "pc_mod_scene_api.h"
+#include "pc_mod_time_api.h"
+#include "pc_mod_quest_api.h"
 #include "lua.h"
 #include "lualib.h"
 #include <cstdio>
@@ -84,6 +88,10 @@ void pc_mod_register_api(lua_State* L) {
     pc_mod_register_player_api(L);
     pc_mod_register_item_api(L);
     pc_mod_register_save_api(L);
+    pc_mod_register_msg_api(L);
+    pc_mod_register_scene_api(L);
+    pc_mod_register_time_api(L);
+    pc_mod_register_quest_api(L);
 }
 
 static void pc_mod_dispatch_impl(const char* event, int pass_dt, float dt) {
@@ -133,7 +141,10 @@ void pc_mod_on_end_frame(float dt) {
     pc_mod_dispatch_dt("endframe", dt);
 }
 void pc_mod_on_pre_move(float dt)    { pc_mod_dispatch_dt("premove", dt); }
-void pc_mod_on_post_move(float dt)   { pc_mod_dispatch_dt("postmove", dt); }
+void pc_mod_on_post_move(float dt) {
+    pc_mod_player_apply_pending_animation();
+    pc_mod_dispatch_dt("postmove", dt);
+}
 void pc_mod_on_pre_draw(float dt)    { pc_mod_dispatch_dt("predraw", dt); }
 void pc_mod_on_post_draw(float dt)   { pc_mod_dispatch_dt("postdraw", dt); }
 void pc_mod_on_save_load(void)   { pc_mod_dispatch("saveload"); }

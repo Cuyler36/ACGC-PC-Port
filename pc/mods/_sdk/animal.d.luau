@@ -15,6 +15,7 @@ export type Animal = {
 	NpcId: number,
 	Name: string,
 	Home: AnimalHome,
+	Contest: ContestQuest,
 	-- Errors if this is the last villager. Invalidates this handle afterward.
 	Delete: (self: Animal) -> (),
 }

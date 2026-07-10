@@ -1,6 +1,7 @@
 #include "pc_mod_animal_api.h"
 #include "pc_mod_animal_internal.h"
 #include "pc_mod_save_internal.h"
+#include "pc_mod_quest_internal.h"
 #include "pc_mod_lua_internal.h"
 #include "mod/pc_mod_actor_internal.h"
 #include "lualib.h"
@@ -279,6 +280,13 @@ static int l_animal_prop_home(lua_State* L) {
     return 1;
 }
 
+static int l_animal_prop_contest(lua_State* L) {
+    PcModAnimalHandle* handle = pc_mod_check_animal(L, 1);
+    pc_mod_require_animal(L, 1);
+    pc_mod_push_contest_quest(L, handle->animal_index);
+    return 1;
+}
+
 static int l_animal_npc_delete(lua_State* L) {
     PcModAnimalHandle* handle = pc_mod_check_animal(L, 1);
     int animal_index = handle->animal_index;
@@ -348,6 +356,7 @@ static const PcModPropertyDef animal_properties[] = {
     { "NpcId",     l_animal_prop_npc_id,     nullptr },
     { "Name",      l_animal_prop_name,       nullptr },
     { "Home",      l_animal_prop_home,       nullptr },
+    { "Contest",   l_animal_prop_contest,    nullptr },
     { nullptr,     nullptr,                  nullptr },
 };
 
